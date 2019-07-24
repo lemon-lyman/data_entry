@@ -34,6 +34,7 @@ Future<DateTime> readDate() async {
 Future<void> main() async {
   globals.newLoginTime = DateTime.now(); // get login time
   globals.oldLoginTime = await readDate();
+  writeDate(globals.newLoginTime.toString());
 //  read last login time
 //  write new login time
 //  if demarcation time was crossed:
@@ -157,7 +158,7 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
 //        title: Text(now.month.toString() + '/' + now.day.toString() + '/' + now.year.toString()),
 //        title: Text(globals.login_time.month.toString() + '/' + globals.login_time.day.toString() + '/' + globals.login_time.year.toString()),
-        title: Text(DateFormat('MM/dd/yyyy H:m:s').format(globals.newLoginTime).toString()),
+        title: Text(DateFormat('MM/dd/yy H:m:s').format(globals.oldLoginTime).toString() + ' ' + DateFormat('MM/dd/yyyy H:m:s').format(globals.newLoginTime).toString()),
 //        title: Text(new DateFormat('EEE, MM/DD').format()),
         actions: <Widget>[      // Add 3 lines from here...
           IconButton(icon: Icon(Icons.list), onPressed:  (){}),
