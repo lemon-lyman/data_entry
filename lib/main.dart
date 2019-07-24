@@ -33,7 +33,12 @@ Future<DateTime> readDate() async {
 
 bool isOvernight(DateTime oldTime, DateTime newTime) {
   // TODO
-  return true;
+//  if 12am<old<4am (today)
+//    if 4am<new
+//      return true
+//  if (new.days - olds.days)>0
+//    return true
+//  return false;
 }
 
 Future<void> main() async {
