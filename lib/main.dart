@@ -10,19 +10,19 @@ Future<String> get _localPath async {
   return directory.path;
 }
 
-Future<File> get _localFile async {
+Future<File> getFile(fileName) async {
   final path = await _localPath;
-  return File('$path/login_time.txt');
+  return File('$path/' + fileName);
 }
 
 Future<File> writeDate(String date) async {
-  final file = await _localFile;
+  final file = await getFile('login_time.txt');
   return file.writeAsString(date);
 }
 
 Future<DateTime> readDate() async {
   try {
-    final file = await _localFile;
+    final file = await getFile('login_time.txt');
     String contents = await file.readAsString();
     return DateTime.parse(contents);
   }catch (e) {
@@ -31,14 +31,32 @@ Future<DateTime> readDate() async {
   }
 }
 
+Future<void> writeHotStats(List<int> hotStats) async {
+  final file = await getFile('hot_stats');
+  file.writeAsBytes(hotStats);
+}
+
+Future<List<int>> readHotStats() async {
+  try {
+    final file = await getFile('hot_stats');
+    List<int> hotStats = await file.readAsBytes();
+    return hotStats;
+  }catch (e) {
+//    return 0;
+    var a = 4;
+  }
+}
+
 bool isOvernight(DateTime oldTime, DateTime newTime) {
-  // TODO
-//  if 12am<old<4am (today)
-//    if 4am<new
-//      return true
-//  if (new.days - olds.days)>0
-//    return true
-//  return false;
+  var demarcTime = DateTime.utc(oldTime.year, oldTime.month, oldTime.day, 4, 0, 0);
+  if (oldTime.isAfter(demarcTime)) {
+    demarcTime =  demarcTime.add(new Duration(days: 1));
+  }
+  if (newTime.isAfter(demarcTime)) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 Future<void> main() async {
@@ -46,12 +64,15 @@ Future<void> main() async {
   globals.oldLoginTime = await readDate();
   writeDate(globals.newLoginTime.toString());
   bool dayChangeFlag = isOvernight(globals.oldLoginTime, globals.newLoginTime);
-//  if demarcation time was crossed:
-//      old data = read(new)
-//      new = blank
-//  else
+  if (isOvernight(globals.oldLoginTime, globals.newLoginTime)) {
+    globals.oldHotStats = await readHotStats();
+  } else {
+//    TODO
+//  Change hot stats storage so that old and new are stored and can be loaded
+//  Maybe pull old off of top of whole-stack
 //      old = read(old)
 //      new = read(new)
+  }
   runApp(MyApp());
 }
 
