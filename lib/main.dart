@@ -1,10 +1,41 @@
 import 'package:flutter/material.dart';
 import 'globals.dart' as globals;
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
-void main() {
-  globals.login_time = DateTime.now(); // get login time
+
+Future<String> get _localPath async {
+  final directory = await getApplicationDocumentsDirectory();
+  return directory.path;
+}
+
+Future<File> get _localFile async {
+  final path = await _localPath;
+  return File('$path/login_time.txt');
+}
+
+Future<File> writeDate(String date) async {
+  final file = await _localFile;
+  return file.writeAsString(date);
+}
+
+Future<DateTime> readDate() async {
+  try {
+    final file = await _localFile;
+    String contents = await file.readAsString();
+    return DateTime.parse(contents);
+  }catch (e) {
+//    return 0;
+  var a = 4;
+  }
+}
+
+Future<void> main() async {
+  globals.newLoginTime = DateTime.now(); // get login time
+  globals.oldLoginTime = await readDate();
 //  read last login time
+//  write new login time
 //  if demarcation time was crossed:
 //      old data = read(new)
 //      new = blank
@@ -126,7 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
 //        title: Text(now.month.toString() + '/' + now.day.toString() + '/' + now.year.toString()),
 //        title: Text(globals.login_time.month.toString() + '/' + globals.login_time.day.toString() + '/' + globals.login_time.year.toString()),
-        title: Text(DateFormat('MM/dd/yyyy h:m:s').format(globals.login_time).toString()),
+        title: Text(DateFormat('MM/dd/yyyy H:m:s').format(globals.newLoginTime).toString()),
 //        title: Text(new DateFormat('EEE, MM/DD').format()),
         actions: <Widget>[      // Add 3 lines from here...
           IconButton(icon: Icon(Icons.list), onPressed:  (){}),
