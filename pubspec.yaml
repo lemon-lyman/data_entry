@@ -25,6 +25,7 @@ dependencies:
   cupertino_icons: ^0.1.2
   intl: ^0.15.8
   path_provider: any
+  csv: ^4.0.3
 
 dev_dependencies:
   flutter_test:

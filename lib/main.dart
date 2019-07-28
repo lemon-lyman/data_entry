@@ -3,10 +3,12 @@ import 'globals.dart' as globals;
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:csv/csv.dart';
 
 
 Future<String> get _localPath async {
   final directory = await getApplicationDocumentsDirectory();
+  globals.gahbage = directory.path;
   return directory.path;
 }
 
@@ -31,20 +33,29 @@ Future<DateTime> readDate() async {
   }
 }
 
-Future<void> writeHotStats(List<int> hotStats) async {
-  final file = await getFile('hot_stats');
+Future<void> writeHotStats(List<int> hotStats, String day) async {
+  final file = await getFile(day);
   file.writeAsBytes(hotStats);
 }
 
-Future<List<int>> readHotStats() async {
-  try {
-    final file = await getFile('hot_stats');
-    List<int> hotStats = await file.readAsBytes();
-    return hotStats;
-  }catch (e) {
-//    return 0;
-    var a = 4;
+Future<List<int>> readHotStats(String day) async {
+  final file = await getFile(day);
+  List<int> hotStats = await file.readAsBytes();
+  return hotStats;
+}
+
+Future<int> append2Log(List<int> completedDay) async {
+  final file = await getFile('Log.csv');
+  List<List<int>> wrappedDay = [completedDay];
+  String formattedDay = const ListToCsvConverter().convert(wrappedDay);
+  final path = await _localPath;
+  if (FileSystemEntity.typeSync('$path/Log.csv') != FileSystemEntityType.notFound) {
+    file.writeAsString(formattedDay, mode: FileMode.append);
+  } else {
+    file.writeAsString(formattedDay);
   }
+
+  return 0;
 }
 
 bool isOvernight(DateTime oldTime, DateTime newTime) {
@@ -59,20 +70,57 @@ bool isOvernight(DateTime oldTime, DateTime newTime) {
   }
 }
 
-Future<void> main() async {
-  globals.newLoginTime = DateTime.now(); // get login time
-  globals.oldLoginTime = await readDate();
-  writeDate(globals.newLoginTime.toString());
-  bool dayChangeFlag = isOvernight(globals.oldLoginTime, globals.newLoginTime);
-  if (isOvernight(globals.oldLoginTime, globals.newLoginTime)) {
-    globals.oldHotStats = await readHotStats();
-  } else {
-//    TODO
-//  Change hot stats storage so that old and new are stored and can be loaded
-//  Maybe pull old off of top of whole-stack
-//      old = read(old)
-//      new = read(new)
+void updateStreaks(List<int> stats, List<int> streaks){
+  for (var i = 0; i < globals.streaks.length; i++;) {
+    if (globals.streaks_type[i]==0) { // Negative Streak
+      if (globals.todayStats[i] > 0) {
+        globals.streaks[i] = 0;
+      } else {
+        globals.streaks[i]++;
+      }
+    } else { // Positive Streak
+      if (globals.todayStats[i] > 0) {
+        globals.streaks[i]++;
+      } else {
+        globals.streaks[i] = 0;
+      }
+    }
   }
+  writeHotStats(globals.streaks, 'streaks');
+}
+
+Future<void> main() async {
+
+  globals.newLoginTime = DateTime.now();
+  globals.oldLoginTime = await readDate();
+  globals.overnightFlag = isOvernight(globals.oldLoginTime, globals.newLoginTime);
+  writeDate(globals.newLoginTime.toString());
+
+  final path = await _localPath;
+
+  if (FileSystemEntity.typeSync('$path/today') != FileSystemEntityType.notFound) {
+    globals.todayStats = await readHotStats('today');
+  } else {
+    globals.todayStats = [0, 0, 0, 0, 0, 0, 0, 0];
+  }
+  if (FileSystemEntity.typeSync('$path/yesterday') != FileSystemEntityType.notFound) {
+    globals.yesterdayStats = await readHotStats('yesterday');
+  } else {
+    globals.yesterdayStats = [0, 0, 0, 0, 0, 0, 0, 0];
+  }
+  if (FileSystemEntity.typeSync('$path/streaks') != FileSystemEntityType.notFound) {
+    globals.streaks = await readHotStats('streaks');
+  } else {
+    globals.streaks = [0, 0, 0, 0, 0, 0, 0, 0];
+  }
+
+  if (isOvernight(globals.oldLoginTime, globals.newLoginTime)) {
+    updateStreaks(globals.todayStats, globals.streaks);
+    append2Log(globals.yesterdayStats);
+    globals.yesterdayStats = await readHotStats('today');
+    globals.todayStats = [0, 0, 0, 0, 0, 0, 0, 0];
+  }
+
   runApp(MyApp());
 }
 
@@ -99,18 +147,13 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   static const num_rows = 8;
-  var count_list = [0, 0, 0, 0, 0, 0, 0, 0];
-  var now = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
 
       appBar: AppBar(
-//        title: Text(now.month.toString() + '/' + now.day.toString() + '/' + now.year.toString()),
-//        title: Text(globals.login_time.month.toString() + '/' + globals.login_time.day.toString() + '/' + globals.login_time.year.toString()),
-        title: Text(DateFormat('MM/dd/yy H:m:s').format(globals.oldLoginTime).toString() + ' ' + DateFormat('MM/dd/yyyy H:m:s').format(globals.newLoginTime).toString()),
-//        title: Text(new DateFormat('EEE, MM/DD').format()),
+        title: Text(DateFormat('MM/dd H:m').format(globals.oldLoginTime).toString() + ' ' + DateFormat('MM/dd H:m').format(globals.newLoginTime).toString()),
         actions: <Widget>[      // Add 3 lines from here...
           IconButton(icon: Icon(Icons.list), onPressed:  (){}),
         ],                      // ... to here.
@@ -135,14 +178,15 @@ class _MyHomePageState extends State<MyHomePage> {
                           shape: new CircleBorder(),
                           elevation: 0.0,
                           child: Icon(Icons.remove_circle_outline),
-                          onPressed: (){setState((){count_list[index]--;});},
+                          onPressed: (){setState((){globals.todayStats[index]--;
+                          writeHotStats(globals.todayStats, 'today');});},
                         )
                       ),
                     ),
 
                     Expanded(
                       child: Text(
-                        count_list[index].toString(),
+                        globals.todayStats[index].toString(),
                         style: Theme.of(context).textTheme.display1,
                       ),
                     ),
@@ -154,13 +198,14 @@ class _MyHomePageState extends State<MyHomePage> {
                             shape: new CircleBorder(),
                             elevation: 0.0,
                             child: Icon(Icons.add_circle_outline),
-                            onPressed: (){setState((){count_list[index]++;});},
+                            onPressed: (){setState((){globals.todayStats[index]++;
+                            writeHotStats(globals.todayStats, 'today');});},
                           )
                       ),
                     ),
                     Expanded(
                       child: Text(
-                        count_list[index].toString(),
+                        globals.streaks[index].toString(),
                         style: Theme.of(context).textTheme.display1,
                       ),
                     ),
