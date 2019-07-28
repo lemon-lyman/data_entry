@@ -8,7 +8,6 @@ import 'package:csv/csv.dart';
 
 Future<String> get _localPath async {
   final directory = await getApplicationDocumentsDirectory();
-  globals.gahbage = directory.path;
   return directory.path;
 }
 
@@ -151,8 +150,8 @@ Future<void> main() async {
   } else {
     globals.streaks = [0, 0, 0, 0, 0, 0, 0, 0];
   }
-
-  if (isOvernight(globals.oldLoginTime, globals.newLoginTime)) {
+  globals.gahbage = isOvernight(globals.oldLoginTime, globals.newLoginTime);
+  if (globals.gahbage) {
     updateStreaks();
     append2Log(globals.yesterdayStats);
     globals.yesterdayStats = await readHotStats('today');
@@ -190,7 +189,8 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
 
       appBar: AppBar(
-        title: Text(DateFormat('MM/dd H:m').format(globals.oldLoginTime).toString() + ' ' + DateFormat('MM/dd H:m').format(globals.newLoginTime).toString()),
+//        title: Text(DateFormat('MM/dd H:m').format(globals.oldLoginTime).toString() + ' ' + DateFormat('MM/dd H:m').format(globals.newLoginTime).toString()),
+        title: Text("Overnight: " + globals.gahbage.toString()),
         actions: <Widget>[      // Add 3 lines from here...
           IconButton(icon: Icon(Icons.list), onPressed:  (){}),
         ],                      // ... to here.
@@ -208,6 +208,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: <Widget>[
 
                     Expanded(
+                      child: Text(
+                        globals.labels[index].toString(),
+                        style: Theme.of(context).textTheme.display1,
+                      ),
+                    ),
+
+                    Expanded(
                       child: Container(
                         width: 200.0,
                         height: 200.0,
@@ -216,7 +223,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           elevation: 0.0,
                           child: Icon(Icons.remove_circle_outline),
                           onPressed: (){setState((){globals.todayStats[index]--;
-                          writeHotStats(globals.todayStats, 'today');});},
+                            writeHotStats(globals.todayStats, 'today');});},
                         )
                       ),
                     ),
@@ -229,15 +236,15 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     Expanded(
                       child: Container(
-                          width: 200.0,
-                          height: 200.0,
-                          child: new RawMaterialButton(
-                            shape: new CircleBorder(),
-                            elevation: 0.0,
-                            child: Icon(Icons.add_circle_outline),
-                            onPressed: (){setState((){globals.todayStats[index]++;
+                        width: 200.0,
+                        height: 200.0,
+                        child: new RawMaterialButton(
+                          shape: new CircleBorder(),
+                          elevation: 0.0,
+                          child: Icon(Icons.add_circle_outline),
+                          onPressed: (){setState((){globals.todayStats[index]++;
                             writeHotStats(globals.todayStats, 'today');});},
-                          )
+                        )
                       ),
                     ),
                     Expanded(
