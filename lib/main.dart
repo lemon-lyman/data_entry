@@ -60,29 +60,65 @@ Future<int> append2Log(List<int> completedDay) async {
 
 bool isOvernight(DateTime oldTime, DateTime newTime) {
   var demarcTime = DateTime.utc(oldTime.year, oldTime.month, oldTime.day, 4, 0, 0);
+  print("demarc: " + demarcTime.toString());
+  print("demarc: " + globals.newLoginTime.toString());
   if (oldTime.isAfter(demarcTime)) {
     demarcTime =  demarcTime.add(new Duration(days: 1));
   }
   if (newTime.isAfter(demarcTime)) {
+    print("isOvernight: True");
     return true;
   } else {
+    print("isOvernight: False");
     return false;
   }
 }
 
-void updateStreaks(List<int> stats, List<int> streaks){
-  for (var i = 0; i < globals.streaks.length; i++;) {
-    if (globals.streaks_type[i]==0) { // Negative Streak
+void clearEverything({bool delete_flag: true}) async {
+  List<String> files = ['Log.csv', 'yesterday', 'today', 'streaks'];
+  for (var file_name in files){
+    final file = await getFile(file_name);
+    if (delete_flag) {
+      print("Deleted: " + file_name);
+      file.deleteSync();
+    } else {
+      file.writeAsStringSync('');
+    }
+  }
+}
+
+void updateStreaks(){
+  print('Running updateStreaks');
+  for (var i = 0; i < globals.streaks.length; i++) {
+    if (globals.streaksType[i]==0) { // Negative Streak
       if (globals.todayStats[i] > 0) {
-        globals.streaks[i] = 0;
+        if (globals.streaks[i] > 0) {
+          globals.streaks[i] = -1;
+        } else {
+          globals.streaks[i]--;
+        }
       } else {
-        globals.streaks[i]++;
+        if (globals.streaks[i] > 0) {
+          globals.streaks[i]++;
+        } else {
+          globals.streaks[i] = 1;
+        }
       }
-    } else { // Positive Streak
+    }
+
+    else { // Positive Streak
       if (globals.todayStats[i] > 0) {
-        globals.streaks[i]++;
+        if (globals.streaks[i] > 0) {
+          globals.streaks[i]++;
+        } else {
+          globals.streaks[i] = 1;
+        }
       } else {
-        globals.streaks[i] = 0;
+        if (globals.streaks[i] > 0) {
+          globals.streaks[i] = -1;
+        } else {
+          globals.streaks[i]--;
+        }
       }
     }
   }
@@ -90,6 +126,8 @@ void updateStreaks(List<int> stats, List<int> streaks){
 }
 
 Future<void> main() async {
+
+//  clearEverything(delete_flag: true);
 
   globals.newLoginTime = DateTime.now();
   globals.oldLoginTime = await readDate();
@@ -115,17 +153,16 @@ Future<void> main() async {
   }
 
   if (isOvernight(globals.oldLoginTime, globals.newLoginTime)) {
-    updateStreaks(globals.todayStats, globals.streaks);
+    updateStreaks();
     append2Log(globals.yesterdayStats);
     globals.yesterdayStats = await readHotStats('today');
     globals.todayStats = [0, 0, 0, 0, 0, 0, 0, 0];
   }
-
+  print(globals.streaks);
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
